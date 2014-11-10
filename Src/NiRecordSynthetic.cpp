@@ -26,6 +26,15 @@
 #include <XnCppWrapper.h>
 #include <XnPropNames.h>
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#include <boost/filesystem.hpp>
+
+#include <iostream>
+#include <string>
+#include <vector>
+
 //---------------------------------------------------------------------------
 // Defines
 //---------------------------------------------------------------------------
@@ -45,7 +54,10 @@
 // Code
 //---------------------------------------------------------------------------
 
+using namespace cv;
+using namespace std;
 using namespace xn;
+using namespace boost::filesystem;
 
 void transformDepthMD(DepthMetaData& depthMD)
 {
@@ -69,7 +81,7 @@ int main(int argc, char* argv[])
 	nRetVal = xnLogInitFromXmlFile(SAMPLE_XML_PATH);
 	if (nRetVal != XN_STATUS_OK)
 	{
-		printf("Log couldn't be opened: %s. Running without log", xnGetStatusString(nRetVal));
+		//printf("Log couldn't be opened: %s. Running without log", xnGetStatusString(nRetVal));
 	}
 
 	if (argc < 3)
@@ -121,8 +133,77 @@ int main(int argc, char* argv[])
 	nRetVal = player.GetNumFrames(depth.GetName(), nNumFrames);
 	CHECK_RC(nRetVal, "Get player number of frames");
 
-	DepthMetaData depthMD;
 
+	// Create array with all filenames
+  typedef vector<path> vec;             // store paths,
+  vec v;                                // so we can sort them later
+  path p ("/home/ddetone/code/makeONI/Data/raw/basement_0001a/");
+  try
+  {
+    if (exists(p))    // does p actually exist?
+    {
+      if (is_directory(p))      // is p a directory?
+      {
+        //cout << p << " is a directory containing:\n";
+        copy(directory_iterator(p), directory_iterator(), back_inserter(v));
+        sort(v.begin(), v.end());             // sort, since directory iteration
+      }
+      else
+        cout << p << " exists, but is not a directory\n";
+    }
+    else
+      cout << p << " does not exist\n";
+  }
+  catch (const filesystem_error& ex)
+  {
+    cout << ex.what() << '\n';
+  }
+
+	// Create vector with only pgm strings
+	vector<string> img_paths;	
+	for(vec::iterator it = v.begin(); it != v.end(); ++it) 
+	{
+		if (it->extension().string() == ".pgm")
+		{
+			string current_file = it->string();
+			cout << current_file << endl;
+			img_paths.push_back(current_file);
+    }
+	}
+
+	//Mat image = imread(img_paths[0], CV_LOAD_IMAGE_GRAYSCALE);   // Read the file
+	Mat image = imread("home/ddetone/code/makeONI/Data/raw/basement_0001a/test_number.jpg", CV_LOAD_IMAGE_GRAYSCALE);   // Read the file
+  if(! image.data )                              // Check for invalid input
+  {
+      cout <<  "Could not open or find the image" << std::endl ;
+      return -1;
+  }
+  namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
+  imshow( "Display window", image );                   // Show our image inside it.
+
+  waitKey(0); 
+
+		//imgs.push_back(
+
+  //directory_iterator end_itr;
+ 
+  //// cycle through the directory
+  //for (directory_iterator itr(p); itr != end_itr; ++itr)
+  //{
+  //    // If it's not a directory, list it. If you want to list directories too, just remove this check.
+  //    if (is_regular_file(itr->path())) {
+  //        // assign current file name to current_file and echo it out to the console.
+	//				string ext = itr->path().extension().string();
+	//				if (ext == ".pgm")
+	//				{
+  //        	string current_file = itr->path().string();
+  //        	cout << current_file << endl;
+	//					fnames.push_back(current_file);
+	//				}
+  //    }
+  //}
+
+	DepthMetaData depthMD;
 	while ((nRetVal = depth.WaitAndUpdateData()) != XN_STATUS_EOF)
 	{
 		CHECK_RC(nRetVal, "Read next frame");
