@@ -5,34 +5,35 @@ sceneDir = [data_path dataset];
 frameList = get_synched_frames(sceneDir);
 
 % Displays each pair of synchronized RGB and Depth frames.
-for ii = 212 : 1 : numel(frameList)
+for ii = 1 : 1 : numel(frameList)
   imgRgb = imread([sceneDir '/' frameList(ii).rawRgbFilename]);
-  imgDepthRaw = swapbytes(imread([sceneDir '/' frameList(ii).rawDepthFilename]));
-  
-  figure(1);
-  % Show the RGB image.
-  subplot 121;
-  imagesc(imgRgb);
-  axis off;
-  axis equal;
-  title('RGB');
-  
-  % Show the projected depth image.
-  imgDepthProj = project_depth_map(imgDepthRaw, imgRgb);
-  subplot 122;
-  imagesc(imgDepthProj);
-  axis off;
-  axis equal;
-  title('Projected Depth');
-  
-  
-  imgDepthWorld = rgb_plane2rgb_world_nocolor(imgDepthProj);
-  
-%   [pcloud, dist] = depthToCloud(imgDepthWorld);
+  imgDepth = swapbytes(imread([sceneDir '/' frameList(ii).rawDepthFilename]));
+
+  camera_params;
+  kc_d = [k1_d, k2_d, p1_d, p2_d, k3_d];
+  fc_d = [fx_d,fy_d];
+  cc_d = [cx_d,cy_d]; 
+
+  fc_rgb = [fx_rgb,fy_rgb];
+  cc_rgb = [cx_rgb,cy_rgb]; 
+  kc_rgb = [k1_rgb,k2_rgb,p1_rgb,p2_rgb,k3_rgb];
+  noiseMask = 255 * double(imgDepth == max(imgDepth(:)));
+
+  % Undistort the noise mask.
+  noiseMask = undistort(noiseMask, fc_d, cc_d, kc_d, 0);
+  noiseMask = noiseMask > 0;
+
+  imgDepth = undistort_depth(double(imgDepth),fc_d,cc_d,kc_d,0, noiseMask);
+
+  % Fix issues introduced by distortion.
+  imgDepth(imgDepth < 600) = 2047;
+  imgDepth(noiseMask) = 2047;
+  depth2 = depth_rel2depth_abs(imgDepth);
+  points3d = depth_plane2depth_world(depth2);
   
   fname = [['../Data/pcd/' dataset] '/' frameList(ii).rawRgbFilename];
   fname(end-3:end) = '.pcd';
-  disp(fname)
-  savepcd(fname, imgDepthWorld);
+  disp(sprintf('processed %d of %d frames', ii, numel(frameList)));
+  savepcd(fname, points3d);
   
 end

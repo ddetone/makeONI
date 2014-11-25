@@ -21,5 +21,9 @@ function points3d = depth_plane2depth_world(imgDepthAbs)
   Y = (yy - cy_d) .* imgDepthAbs / fy_d;
   Z = imgDepthAbs;
   
-  points3d = [X(:) Y(:) Z(:)];
+  points3d(:,:,1) = X;
+  points3d(:,:,2) = Y;
+  points3d(:,:,3) = Z;
+  
+%   points3d = [X(:) Y(:) Z(:)];
 end
