@@ -299,10 +299,10 @@ main (int argc, char ** argv)
   std::cout << "Extracting supervoxels!\n";
   super.extract (supervoxel_clusters);
   std::cout << "Found " << supervoxel_clusters.size () << " Supervoxels!\n";
-  PointLCloudT::Ptr labeled_voxel_cloud = super.getLabeledVoxelCloud ();
+  // PointLCloudT::Ptr labeled_voxel_cloud = super.getLabeledVoxelCloud ();
   PointCloudT::Ptr voxel_centroid_cloud = super.getVoxelCentroidCloud ();
-  PointNCloudT::Ptr sv_normal_cloud = super.makeSupervoxelNormalCloud (supervoxel_clusters);
-  PointLCloudT::Ptr full_labeled_cloud = super.getLabeledCloud ();
+  // PointNCloudT::Ptr sv_normal_cloud = super.makeSupervoxelNormalCloud (supervoxel_clusters);
+  // PointLCloudT::Ptr full_labeled_cloud = super.getLabeledCloud ();
   
   std::cout << "Getting supervoxel adjacency\n";
   std::multimap<uint32_t, uint32_t> label_adjacency;
@@ -313,11 +313,10 @@ main (int argc, char ** argv)
   super.refineSupervoxels (3, refined_supervoxel_clusters);
 
   PointLCloudT::Ptr refined_labeled_voxel_cloud = super.getLabeledVoxelCloud ();
-  PointNCloudT::Ptr refined_sv_normal_cloud = super.makeSupervoxelNormalCloud (refined_supervoxel_clusters);
+  // PointNCloudT::Ptr refined_sv_normal_cloud = super.makeSupervoxelNormalCloud (refined_supervoxel_clusters);
   PointLCloudT::Ptr refined_full_labeled_cloud = super.getLabeledCloud ();
 
-
-  boost::shared_ptr<PointLCloudT> output_cloud (new PointLCloudT());
+  PointLCloudT::Ptr output_cloud (new PointLCloudT());
 
 
   
@@ -346,9 +345,9 @@ main (int argc, char ** argv)
   {
     if (show_supervoxels)
     {
-      if (!viewer->updatePointCloud ((show_refined)?refined_labeled_voxel_cloud:labeled_voxel_cloud, "colored voxels"))
+      if (!viewer->updatePointCloud<PointLT> (refined_labeled_voxel_cloud, "colored voxels"))
       {
-        viewer->addPointCloud ((show_refined)?refined_labeled_voxel_cloud:labeled_voxel_cloud, "colored voxels");
+        viewer->addPointCloud<PointLT> (refined_labeled_voxel_cloud, "colored voxels");
         viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3.0, "colored voxels");
       }
     }
@@ -357,20 +356,20 @@ main (int argc, char ** argv)
       // viewer->removePointCloud ("colored voxels");
     }
     
-    if (show_voxel_centroids)
-    {
-      if (!viewer->updatePointCloud (voxel_centroid_cloud, "voxel centroids"))
-      {
-        viewer->addPointCloud (voxel_centroid_cloud, "voxel centroids");
-        viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,2.0, "voxel centroids");
-      }
-    }
-    else
-    {
-      viewer->removePointCloud ("voxel centroids");
-    }
+    // if (show_voxel_centroids)
+    // {
+    //   if (!viewer->updatePointCloud<PointT> (voxel_centroid_cloud, "voxel centroids"))
+    //   {
+    //     viewer->addPointCloud<PointT> (voxel_centroid_cloud, "voxel centroids");
+    //     viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,2.0, "voxel centroids");
+    //   }
+    // }
+    // else
+    // {
+    //   viewer->removePointCloud ("voxel centroids");
+    // }
 
-// ----MAKE LABELS----!!!!!!!!!!!!!!!!
+//----MAKE LABELS----!!!!!!!!!!!!!!!!
     if (make_label1)
     {
 
@@ -398,60 +397,60 @@ main (int argc, char ** argv)
           output_cloud->push_back(ptl);
         } 
       }
-      viewer->updatePointCloud(output_cloud, "colored voxels");
+      viewer->updatePointCloud<PointLT> (output_cloud, "colored voxels");
       svoxel_idx++;
       make_label1 = false;
     }
 // ----END MAKE LABELS----!!!!!!!!!!!!!!!!!!!
 
-    if (show_supervoxel_normals)
-    {
-      if (refined_sv_normal_shown != show_refined || !sv_added)
-      {
-        viewer->removePointCloud ("supervoxel_normals");
-        viewer->addPointCloudNormals<PointNormal> ((show_refined)?refined_sv_normal_cloud:sv_normal_cloud,1,0.05f, "supervoxel_normals");
-        sv_added = true;
-      }
-      refined_sv_normal_shown = show_refined;
-    }
-    else if (!show_supervoxel_normals)
-    {
-      viewer->removePointCloud ("supervoxel_normals");
-    }
+    // if (show_supervoxel_normals)
+    // {
+    //   if (refined_sv_normal_shown != show_refined || !sv_added)
+    //   {
+    //     viewer->removePointCloud ("supervoxel_normals");
+    //     viewer->addPointCloudNormals<PointNormal> (refined_sv_normal_cloud,1,0.05f, "supervoxel_normals");
+    //     sv_added = true;
+    //   }
+    //   refined_sv_normal_shown = show_refined;
+    // }
+    // else if (!show_supervoxel_normals)
+    // {
+    //   viewer->removePointCloud ("supervoxel_normals");
+    // }
     
-    if (show_normals)
-    {
-      std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr>::iterator sv_itr,sv_itr_end;
-      sv_itr = ((show_refined)?refined_supervoxel_clusters.begin ():supervoxel_clusters.begin ());
-      sv_itr_end = ((show_refined)?refined_supervoxel_clusters.end ():supervoxel_clusters.end ());
-      for (; sv_itr != sv_itr_end; ++sv_itr)
-      {
-        std::stringstream ss;
-        ss << sv_itr->first <<"_normal";
-        if (refined_normal_shown != show_refined || !normals_added)
-        {
-          viewer->removePointCloud (ss.str ());
-          viewer->addPointCloudNormals<PointT,Normal> ((sv_itr->second)->voxels_,(sv_itr->second)->normals_,10,0.02f,ss.str ());
-        //  std::cout << (sv_itr->second)->normals_->points[0]<<"\n";
+    // if (show_normals)
+    // {
+    //   std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr>::iterator sv_itr,sv_itr_end;
+    //   sv_itr = ((show_refined)?refined_supervoxel_clusters.begin ():supervoxel_clusters.begin ());
+    //   sv_itr_end = ((show_refined)?refined_supervoxel_clusters.end ():supervoxel_clusters.end ());
+    //   for (; sv_itr != sv_itr_end; ++sv_itr)
+    //   {
+    //     std::stringstream ss;
+    //     ss << sv_itr->first <<"_normal";
+    //     if (refined_normal_shown != show_refined || !normals_added)
+    //     {
+    //       viewer->removePointCloud (ss.str ());
+    //       viewer->addPointCloudNormals<PointT,Normal> ((sv_itr->second)->voxels_,(sv_itr->second)->normals_,10,0.02f,ss.str ());
+    //     //  std::cout << (sv_itr->second)->normals_->points[0]<<"\n";
           
-        }
+    //     }
           
-      }
-      normals_added = true;
-      refined_normal_shown = show_refined;
-    }
-    else if (!show_normals)
-    {
-      std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr>::iterator sv_itr,sv_itr_end;
-      sv_itr = ((show_refined)?refined_supervoxel_clusters.begin ():supervoxel_clusters.begin ());
-      sv_itr_end = ((show_refined)?refined_supervoxel_clusters.end ():supervoxel_clusters.end ());
-      for (; sv_itr != sv_itr_end; ++sv_itr)
-      {
-        std::stringstream ss;
-        ss << sv_itr->first << "_normal";
-        viewer->removePointCloud (ss.str ());
-      }
-    }
+    //   }
+    //   normals_added = true;
+    //   refined_normal_shown = show_refined;
+    // }
+    // else if (!show_normals)
+    // {
+    //   std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr>::iterator sv_itr,sv_itr_end;
+    //   sv_itr = ((show_refined)?refined_supervoxel_clusters.begin ():supervoxel_clusters.begin ());
+    //   sv_itr_end = ((show_refined)?refined_supervoxel_clusters.end ():supervoxel_clusters.end ());
+    //   for (; sv_itr != sv_itr_end; ++sv_itr)
+    //   {
+    //     std::stringstream ss;
+    //     ss << sv_itr->first << "_normal";
+    //     viewer->removePointCloud (ss.str ());
+    //   }
+    // }
     
     if (show_graph && !graph_added)
     {
