@@ -13,6 +13,8 @@
 #include <vtkImageFlip.h>
 #include <vtkPolyLine.h>
 
+#include <Eigen/Dense>
+
 // Types
 typedef pcl::PointXYZRGBA PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
@@ -32,6 +34,9 @@ bool show_refined = false;
 bool show_help = true;
 bool make_label1 = false;
 bool make_label2 = false;
+bool clicked = false;
+Eigen::Vector3d cam_wor;
+Eigen::Vector3d ray_wor;
 
 int svoxel_idx = 1;
 
@@ -73,6 +78,54 @@ mouse_callback (const pcl::visualization::MouseEvent &event, void* viewer_void)
 
     sprintf (str, "text#%03d", text_id ++);
     viewer->addText ("clicked here", event.getX (), event.getY (), str);
+  }
+  if (event.getButton () == pcl::visualization::MouseEvent::RightButton && event.getType () == pcl::visualization::MouseEvent::MouseButtonRelease)
+  {
+    std::vector<pcl::visualization::Camera> cameras;
+    viewer->getCameras(cameras);
+    pcl::visualization::Camera camera = cameras[0];
+    double width = camera.window_size[0];
+    double height = camera.window_size[1];
+
+    // Normalized device space
+    double mouse_x = event.getX ();
+    double mouse_y = event.getY ();
+    double x = (2.0f * mouse_x) / width - 1.0f;
+    double y = (2.0f * mouse_y) / height - 1.0f;
+    double z = 1.0f;
+    Eigen::Vector3d ray_nds(x, y, z);
+
+    // Homogenous clip coords, flipping Z
+    Eigen::Vector4d ray_clip(ray_nds(0), ray_nds(1), -1.0, 1.0);
+
+    // Camera coords
+    Eigen::Matrix4d proj;
+    camera.computeProjectionMatrix(proj);
+    Eigen::Vector4d ray_eye = proj.inverse() * ray_clip;
+    ray_eye = Eigen::Vector4d(ray_eye(0), ray_eye(1), -1.0, 0.0);
+
+    // World coords
+    Eigen::Matrix4d view_mat;
+    camera.computeViewMatrix(view_mat);
+    Eigen::Vector4d ray_wor4 = (view_mat.inverse() * ray_eye);
+    ray_wor = Eigen::Vector3d(ray_wor4(0), ray_wor4(1), ray_wor4(2));
+    // don't forget to normalise the vector at some point
+    ray_wor.normalize();
+
+    // Get camera pose
+    Eigen::Affine3f cam_pose;
+    cam_pose = viewer->getViewerPose();
+    cam_wor = cam_pose.translation().cast<double>();
+
+    clicked = true;
+    pcl::PointXYZ p1 = pcl::PointXYZ(cam_wor(0),cam_wor(1),cam_wor(2));
+    z = 10.0f;
+    pcl::PointXYZ p2 = pcl::PointXYZ(cam_wor(0)+z*ray_wor(0),cam_wor(1)+z*ray_wor(1),cam_wor(2)+z*ray_wor(2));
+
+    svoxel_idx++;
+    std::string id = "line " + svoxel_idx;
+    viewer->addLine (p1, p2, id);
+
   }
 }
 
@@ -419,6 +472,25 @@ main (int argc, char ** argv)
       svoxel_idx++;
       make_label1 = false;
     }
+
+    if (clicked)
+    {
+
+      std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr>::iterator sv_itr,sv_itr_end;
+      sv_itr = ((show_refined)?refined_supervoxel_clusters.begin ():supervoxel_clusters.begin ());
+      sv_itr_end = ((show_refined)?refined_supervoxel_clusters.end ():supervoxel_clusters.end ());
+      for (; sv_itr != sv_itr_end; ++sv_itr)
+      {
+
+        PointT sv_centr;
+        sv_itr->second->getCentroidPoint(sv_centr);
+        Eigen::Vector3d c_wor = Eigen::Vector3d(sv_centr.x, sv_centr.y, sv_centr.z);
+        double b = ray_wor.transpose() * (cam_wor - c_wor);
+        double c = (cam_wor - c_wor).transpose() * (cam_wor - c_wor) - 1.0f;
+          
+      }
+    }
+
 // ----END MAKE LABELS----!!!!!!!!!!!!!!!!!!!
 
     // if (show_supervoxel_normals)
