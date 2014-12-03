@@ -465,8 +465,8 @@ main (int argc, char ** argv)
         x1 = cam_wor;
         x2 = cam_wor + 10.0f*ray_wor;
 
-        double dn = ((x0 - x1).cross(x0 - x2)).lpNorm<1>();
-        double dd = (x2 - x1).lpNorm<1>();
+        double dn = ((x0 - x1).cross(x0 - x2)).lpNorm<2>();
+        double dd = (x2 - x1).lpNorm<2>();
         double d = dn / dd;
 
         if (d < min_d)
