@@ -61,6 +61,21 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void*)
     
 }
 
+unsigned int text_id = 0;
+void 
+mouse_callback (const pcl::visualization::MouseEvent &event, void* viewer_void)
+{
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer = *static_cast<boost::shared_ptr<pcl::visualization::PCLVisualizer> *> (viewer_void);
+  if (event.getButton () == pcl::visualization::MouseEvent::LeftButton && event.getType () == pcl::visualization::MouseEvent::MouseButtonRelease)
+  {
+    std::cout << "Left mouse button released at position (" << event.getX () << ", " << event.getY () << ")" << std::endl;
+    char str[512];
+
+    sprintf (str, "text#%03d", text_id ++);
+    viewer->addText ("clicked here", event.getX (), event.getY (), str);
+  }
+}
+
 void addSupervoxelConnectionsToViewer (PointT &supervoxel_center, 
                                        PointCloudT &adjacent_supervoxel_centers,
                                        std::string supervoxel_name,
@@ -332,6 +347,7 @@ main (int argc, char ** argv)
   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
   viewer->setBackgroundColor (0, 0, 0);
   viewer->registerKeyboardCallback(keyboard_callback, 0);
+  viewer->registerMouseCallback(mouse_callback, (void*)&viewer);
 
  
   pcl::visualization::PointCloudColorHandlerLabelField<PointLT> labelColor(refined_labeled_voxel_cloud);
