@@ -15,6 +15,11 @@
 
 #include <Eigen/Dense>
 
+#include <sstream>
+
+#define SSTR( x ) dynamic_cast< std::ostringstream & >( \
+        ( std::ostringstream() << std::dec << x ) ).str()
+
 // Types
 typedef pcl::PointXYZRGBA PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
@@ -404,6 +409,7 @@ main (int argc, char ** argv)
 
  
   pcl::visualization::PointCloudColorHandlerLabelField<PointLT> labelColor(refined_labeled_voxel_cloud);
+  // pcl::visualization::PointCloudColorHandlerCustom<PointLT> greenColor(cloud, 0, 255, 0);
   bool refined_normal_shown = show_refined;
   bool refined_sv_normal_shown = show_refined;
   bool sv_added = false;
@@ -415,12 +421,12 @@ main (int argc, char ** argv)
   {
     if (show_supervoxels)
     {
-      if (!viewer->updatePointCloud<PointLT> (refined_labeled_voxel_cloud, labelColor, "colored voxels"))
-      {
+      // if (!viewer->updatePointCloud<PointLT> (refined_labeled_voxel_cloud, labelColor, "colored voxels"))
+      // {
 
-        viewer->addPointCloud<PointLT> (refined_labeled_voxel_cloud, labelColor, "colored voxels");
-        viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3.0, "colored voxels");
-      }
+      //   viewer->addPointCloud<PointLT> (refined_labeled_voxel_cloud, labelColor, "colored voxels");
+      //   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3.0, "colored voxels");
+      // }
     }
     else
     {
@@ -441,42 +447,43 @@ main (int argc, char ** argv)
     // }
 
 //----MAKE LABELS----!!!!!!!!!!!!!!!!
-    if (make_label1)
-    {
+    // if (make_label1)
+    // {
 
-      std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr >::iterator sv_itr, sv_itr_end;
-      sv_itr = refined_supervoxel_clusters.find(svoxel_idx);
-      sv_itr_end = refined_supervoxel_clusters.end();
+    //   std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr >::iterator sv_itr, sv_itr_end;
+    //   sv_itr = refined_supervoxel_clusters.find(svoxel_idx);
+    //   sv_itr_end = refined_supervoxel_clusters.end();
 
-      if (sv_itr == sv_itr_end)
-        cout << "Cluster label not found" << endl;
-      else
-      {
-        Supervoxel<PointT>::Ptr sv = (sv_itr->second);
-        PointCloudT::Ptr pct = sv->voxels_;
+    //   if (sv_itr == sv_itr_end)
+    //     cout << "Cluster label not found" << endl;
+    //   else
+    //   {
+    //     Supervoxel<PointT>::Ptr sv = (sv_itr->second);
+    //     PointCloudT::Ptr pct = sv->voxels_;
 
-        PointCloudT::iterator lbl_it = pct->begin();
-        PointCloudT::iterator lbl_it_end = pct->end();
-        for (; lbl_it != lbl_it_end; ++lbl_it)
-        {
-          PointT pt = (*lbl_it);
-          PointLT ptl;
-          ptl.x = pt.x;
-          ptl.y = pt.y;
-          ptl.z = pt.z;
-          ptl.label = 1;
-          output_cloud->push_back(ptl);
-        } 
-      }
-      viewer->updatePointCloud<PointLT> (output_cloud, "colored voxels");
-      svoxel_idx++;
-      make_label1 = false;
-    }
+    //     PointCloudT::iterator lbl_it = pct->begin();
+    //     PointCloudT::iterator lbl_it_end = pct->end();
+    //     for (; lbl_it != lbl_it_end; ++lbl_it)
+    //     {
+    //       PointT pt = (*lbl_it);
+    //       PointLT ptl;
+    //       ptl.x = pt.x;
+    //       ptl.y = pt.y;
+    //       ptl.z = pt.z;
+    //       ptl.label = 1;
+    //       output_cloud->push_back(ptl);
+    //     } 
+    //   }
+    //   viewer->updatePointCloud<PointLT> (output_cloud, "colored voxels");
+    //   svoxel_idx++;
+    //   make_label1 = false;
+    // }
 
     if (clicked)
     {
 
-      std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr>::iterator sv_itr,sv_itr_end;
+      double min_d = 99999999.0f;
+      std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr>::iterator sv_itr,sv_itr_end, sv_min_d;
       sv_itr = ((show_refined)?refined_supervoxel_clusters.begin ():supervoxel_clusters.begin ());
       sv_itr_end = ((show_refined)?refined_supervoxel_clusters.end ():supervoxel_clusters.end ());
       for (; sv_itr != sv_itr_end; ++sv_itr)
@@ -485,10 +492,68 @@ main (int argc, char ** argv)
         PointT sv_centr;
         sv_itr->second->getCentroidPoint(sv_centr);
         Eigen::Vector3d c_wor = Eigen::Vector3d(sv_centr.x, sv_centr.y, sv_centr.z);
-        double b = ray_wor.transpose() * (cam_wor - c_wor);
-        double c = (cam_wor - c_wor).transpose() * (cam_wor - c_wor) - 1.0f;
-          
+
+        Eigen::Vector3d x0,x1,x2;
+        x0 = c_wor;
+        x1 = cam_wor;
+        x2 = cam_wor + 10.0f*ray_wor;
+
+        double dn = ((x0 - x1).cross(x0 - x2)).lpNorm<1>();
+        double dd = (x2 - x1).lpNorm<1>();
+        double d = dn / dd;
+
+        if (d < min_d)
+        {
+          sv_min_d = sv_itr;
+          min_d = d;
+        }
+
+        // double b = ray_wor.transpose() * (cam_wor - c_wor);
+        // double r = 0.02f;
+        // double c = (cam_wor - c_wor).transpose() * (cam_wor - c_wor) - r;
+        // if ((b*b - c) > 0)
+        // {
+        //   // Supervoxel<PointT>::Ptr sv = (sv_itr->second);
+        //   // PointCloudT::Ptr pct = sv->voxels_;
+
+        //   // PointCloudT::iterator lbl_it = pct->begin();
+        //   // PointCloudT::iterator lbl_it_end = pct->end();
+        //   // for (; lbl_it != lbl_it_end; ++lbl_it)
+        //   // {
+        //   //   PointT pt = (*lbl_it);
+        //   //   PointLT ptl;
+        //   //   ptl.x = pt.x;
+        //   //   ptl.y = pt.y;
+        //   //   ptl.z = pt.z;
+        //   //   ptl.label = 1;
+        //   //   output_cloud->push_back(ptl);
+        //   // } 
+
+
+        // }
+
+
+
       }
+
+      PointT sv_closest;
+      sv_min_d->second->getCentroidPoint(sv_closest);
+      pcl::PointXYZ p1 = pcl::PointXYZ(sv_closest.x,sv_closest.y,sv_closest.z);
+
+      svoxel_idx++;
+
+      std::string id = SSTR( svoxel_idx );
+      viewer->addSphere (p1, 0.01f, id);
+      viewer->spinOnce (100);
+
+      // pcl::visualization::PointCloudColorHandlerLabelField<PointLT> outputColor(output_cloud);
+      // if (!viewer->updatePointCloud<PointLT> (refined_labeled_voxel_cloud, outputColor, "labeled voxels"))
+      // {
+
+      //   viewer->addPointCloud<PointLT> (refined_labeled_voxel_cloud, outputColor, "labeled voxels");
+      //   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3.0, "labeled voxels");
+      // }
+      clicked = false;
     }
 
 // ----END MAKE LABELS----!!!!!!!!!!!!!!!!!!!
