@@ -334,6 +334,7 @@ main (int argc, char ** argv)
   viewer->registerKeyboardCallback(keyboard_callback, 0);
 
  
+  pcl::visualization::PointCloudColorHandlerLabelField<PointLT> labelColor(refined_labeled_voxel_cloud);
   bool refined_normal_shown = show_refined;
   bool refined_sv_normal_shown = show_refined;
   bool sv_added = false;
@@ -345,9 +346,10 @@ main (int argc, char ** argv)
   {
     if (show_supervoxels)
     {
-      if (!viewer->updatePointCloud<PointLT> (refined_labeled_voxel_cloud, "colored voxels"))
+      if (!viewer->updatePointCloud<PointLT> (refined_labeled_voxel_cloud, labelColor, "colored voxels"))
       {
-        viewer->addPointCloud<PointLT> (refined_labeled_voxel_cloud, "colored voxels");
+
+        viewer->addPointCloud<PointLT> (refined_labeled_voxel_cloud, labelColor, "colored voxels");
         viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3.0, "colored voxels");
       }
     }
