@@ -237,114 +237,114 @@ main (int argc, char ** argv)
   float normal_importance = 1.0f;
   pcl::console::parse (argc, argv, "-n", normal_importance);
   
-  if (!pcd_file_specified)
-  {
-    //Read the images
-    vtkSmartPointer<vtkImageReader2Factory> reader_factory = vtkSmartPointer<vtkImageReader2Factory>::New ();
-    vtkImageReader2* rgb_reader = reader_factory->CreateImageReader2 (rgb_path.c_str ());
-    //qDebug () << "RGB File="<< QString::fromStdString(rgb_path);
-    if ( ! rgb_reader->CanReadFile (rgb_path.c_str ()))
-    {
-      std::cout << "Cannot read rgb image file!";
-      return (1);
-    }
-    rgb_reader->SetFileName (rgb_path.c_str ());
-    rgb_reader->Update ();
-    //qDebug () << "Depth File="<<QString::fromStdString(depth_path);
-    vtkImageReader2* depth_reader = reader_factory->CreateImageReader2 (depth_path.c_str ());
-    if ( ! depth_reader->CanReadFile (depth_path.c_str ()))
-    {
-      std::cout << "Cannot read depth image file!";
-      return (1);
-    }
-    depth_reader->SetFileName (depth_path.c_str ());
-    depth_reader->Update ();
+  // if (!pcd_file_specified)
+  // {
+  //   //Read the images
+  //   vtkSmartPointer<vtkImageReader2Factory> reader_factory = vtkSmartPointer<vtkImageReader2Factory>::New ();
+  //   vtkImageReader2* rgb_reader = reader_factory->CreateImageReader2 (rgb_path.c_str ());
+  //   //qDebug () << "RGB File="<< QString::fromStdString(rgb_path);
+  //   if ( ! rgb_reader->CanReadFile (rgb_path.c_str ()))
+  //   {
+  //     std::cout << "Cannot read rgb image file!";
+  //     return (1);
+  //   }
+  //   rgb_reader->SetFileName (rgb_path.c_str ());
+  //   rgb_reader->Update ();
+  //   //qDebug () << "Depth File="<<QString::fromStdString(depth_path);
+  //   vtkImageReader2* depth_reader = reader_factory->CreateImageReader2 (depth_path.c_str ());
+  //   if ( ! depth_reader->CanReadFile (depth_path.c_str ()))
+  //   {
+  //     std::cout << "Cannot read depth image file!";
+  //     return (1);
+  //   }
+  //   depth_reader->SetFileName (depth_path.c_str ());
+  //   depth_reader->Update ();
     
-    vtkSmartPointer<vtkImageFlip> flipXFilter = vtkSmartPointer<vtkImageFlip>::New();
-    flipXFilter->SetFilteredAxis(0); // flip x axis
-    flipXFilter->SetInputConnection(rgb_reader->GetOutputPort());
-    flipXFilter->Update();
+  //   vtkSmartPointer<vtkImageFlip> flipXFilter = vtkSmartPointer<vtkImageFlip>::New();
+  //   flipXFilter->SetFilteredAxis(0); // flip x axis
+  //   flipXFilter->SetInputConnection(rgb_reader->GetOutputPort());
+  //   flipXFilter->Update();
     
-    vtkSmartPointer<vtkImageFlip> flipXFilter2 = vtkSmartPointer<vtkImageFlip>::New();
-    flipXFilter2->SetFilteredAxis(0); // flip x axis
-    flipXFilter2->SetInputConnection(depth_reader->GetOutputPort());
-    flipXFilter2->Update();
+  //   vtkSmartPointer<vtkImageFlip> flipXFilter2 = vtkSmartPointer<vtkImageFlip>::New();
+  //   flipXFilter2->SetFilteredAxis(0); // flip x axis
+  //   flipXFilter2->SetInputConnection(depth_reader->GetOutputPort());
+  //   flipXFilter2->Update();
     
-    vtkSmartPointer<vtkImageData> rgb_image = flipXFilter->GetOutput ();
-    int *rgb_dims = rgb_image->GetDimensions ();
-    vtkSmartPointer<vtkImageData> depth_image = flipXFilter2->GetOutput ();
-    int *depth_dims = depth_image->GetDimensions ();
+  //   vtkSmartPointer<vtkImageData> rgb_image = flipXFilter->GetOutput ();
+  //   int *rgb_dims = rgb_image->GetDimensions ();
+  //   vtkSmartPointer<vtkImageData> depth_image = flipXFilter2->GetOutput ();
+  //   int *depth_dims = depth_image->GetDimensions ();
     
-    if (rgb_dims[0] != depth_dims[0] || rgb_dims[1] != depth_dims[1])
-    {
-      std::cout << "Depth and RGB dimensions to not match!";
-      std::cout << "RGB Image is of size "<<rgb_dims[0] << " by "<<rgb_dims[1];
-      std::cout << "Depth Image is of size "<<depth_dims[0] << " by "<<depth_dims[1];
-      return (1);
-    }
+  //   if (rgb_dims[0] != depth_dims[0] || rgb_dims[1] != depth_dims[1])
+  //   {
+  //     std::cout << "Depth and RGB dimensions to not match!";
+  //     std::cout << "RGB Image is of size "<<rgb_dims[0] << " by "<<rgb_dims[1];
+  //     std::cout << "Depth Image is of size "<<depth_dims[0] << " by "<<depth_dims[1];
+  //     return (1);
+  //   }
  
-    cloud->points.reserve (depth_dims[0] * depth_dims[1]);
-    cloud->width = depth_dims[0];
-    cloud->height = depth_dims[1];
-    cloud->is_dense = false;
+  //   cloud->points.reserve (depth_dims[0] * depth_dims[1]);
+  //   cloud->width = depth_dims[0];
+  //   cloud->height = depth_dims[1];
+  //   cloud->is_dense = false;
     
     
-    // Fill in image data
-    int centerX = static_cast<int>(cloud->width / 2.0);
-    int centerY = static_cast<int>(cloud->height / 2.0);
-    unsigned short* depth_pixel;
-    unsigned char* color_pixel;
-    float scale = 1.0f/1000.0f;
-    float focal_length = 525.0f;
-    float fl_const = 1.0f / focal_length;
-    depth_pixel = static_cast<unsigned short*>(depth_image->GetScalarPointer (depth_dims[0]-1,depth_dims[1]-1,0));
-    color_pixel = static_cast<unsigned char*> (rgb_image->GetScalarPointer (depth_dims[0]-1,depth_dims[1]-1,0));
+  //   // Fill in image data
+  //   int centerX = static_cast<int>(cloud->width / 2.0);
+  //   int centerY = static_cast<int>(cloud->height / 2.0);
+  //   unsigned short* depth_pixel;
+  //   unsigned char* color_pixel;
+  //   float scale = 1.0f/1000.0f;
+  //   float focal_length = 525.0f;
+  //   float fl_const = 1.0f / focal_length;
+  //   depth_pixel = static_cast<unsigned short*>(depth_image->GetScalarPointer (depth_dims[0]-1,depth_dims[1]-1,0));
+  //   color_pixel = static_cast<unsigned char*> (rgb_image->GetScalarPointer (depth_dims[0]-1,depth_dims[1]-1,0));
     
-    for (size_t y=0; y<cloud->height; ++y)
-    {
-      for (size_t x=0; x<cloud->width; ++x, --depth_pixel, color_pixel-=3)
-      {
-        PointT new_point;
-        //  uint8_t* p_i = &(cloud_blob->data[y * cloud_blob->row_step + x * cloud_blob->point_step]);
-        float depth = static_cast<float>(*depth_pixel) * scale;
-        if (depth == 0.0f)
-        {
-          new_point.x = new_point.y = new_point.z = std::numeric_limits<float>::quiet_NaN ();
-        }
-        else
-        {
-          new_point.x = (static_cast<float> (x) - centerX) * depth * fl_const;
-          new_point.y = (static_cast<float> (centerY) - y) * depth * fl_const; // vtk seems to start at the bottom left image corner
-          new_point.z = depth;
-        }
+  //   for (size_t y=0; y<cloud->height; ++y)
+  //   {
+  //     for (size_t x=0; x<cloud->width; ++x, --depth_pixel, color_pixel-=3)
+  //     {
+  //       PointT new_point;
+  //       //  uint8_t* p_i = &(cloud_blob->data[y * cloud_blob->row_step + x * cloud_blob->point_step]);
+  //       float depth = static_cast<float>(*depth_pixel) * scale;
+  //       if (depth == 0.0f)
+  //       {
+  //         new_point.x = new_point.y = new_point.z = std::numeric_limits<float>::quiet_NaN ();
+  //       }
+  //       else
+  //       {
+  //         new_point.x = (static_cast<float> (x) - centerX) * depth * fl_const;
+  //         new_point.y = (static_cast<float> (centerY) - y) * depth * fl_const; // vtk seems to start at the bottom left image corner
+  //         new_point.z = depth;
+  //       }
         
-        uint32_t rgb = static_cast<uint32_t>(color_pixel[0]) << 16 |  static_cast<uint32_t>(color_pixel[1]) << 8 |  static_cast<uint32_t>(color_pixel[2]);
-        new_point.rgb = *reinterpret_cast<float*> (&rgb);
-        cloud->points.push_back (new_point);
+  //       uint32_t rgb = static_cast<uint32_t>(color_pixel[0]) << 16 |  static_cast<uint32_t>(color_pixel[1]) << 8 |  static_cast<uint32_t>(color_pixel[2]);
+  //       new_point.rgb = *reinterpret_cast<float*> (&rgb);
+  //       cloud->points.push_back (new_point);
         
-      }
-    }
-  }
-  else
-  {
+  //     }
+  //   }
+  // }
+  // else
+  // {
     /// check if the provided pcd file contains normals
-    pcl::PCLPointCloud2 input_pointcloud2;
-    if (pcl::io::loadPCDFile (pcd_path, input_pointcloud2))
+  pcl::PCLPointCloud2 input_pointcloud2;
+  if (pcl::io::loadPCDFile (pcd_path, input_pointcloud2))
+  {
+    PCL_ERROR ("ERROR: Could not read input point cloud %s.\n", pcd_path.c_str ());
+    return (3);
+  }
+  pcl::fromPCLPointCloud2 (input_pointcloud2, *cloud);
+  if (!ignore_provided_normals)
+  {
+    if (hasField (input_pointcloud2,"normal_x"))
     {
-      PCL_ERROR ("ERROR: Could not read input point cloud %s.\n", pcd_path.c_str ());
-      return (3);
-    }
-    pcl::fromPCLPointCloud2 (input_pointcloud2, *cloud);
-    if (!ignore_provided_normals)
-    {
-      if (hasField (input_pointcloud2,"normal_x"))
-      {
-        std::cout << "Using normals contained in file. Set --nonormals option to disable this.\n";
-        pcl::fromPCLPointCloud2 (input_pointcloud2, *input_normals);
-        has_normals = true;
-      }
+      std::cout << "Using normals contained in file. Set --nonormals option to disable this.\n";
+      pcl::fromPCLPointCloud2 (input_pointcloud2, *input_normals);
+      has_normals = true;
     }
   }
+  // }
   std::cout << "Done making cloud!\n";
 
   ///////////////////////////////  //////////////////////////////
