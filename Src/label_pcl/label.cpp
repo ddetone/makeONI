@@ -1,17 +1,22 @@
 #include <pcl/common/time.h>
+#include <pcl/common/io.h>
 #include <pcl/console/parse.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/png_io.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/io/vtk_lib_io.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/segmentation/supervoxel_clustering.h>
+#include <pcl/range_image/range_image_planar.h>
 
 #include <vtkImageReader2Factory.h>
 #include <vtkImageReader2.h>
 #include <vtkImageData.h>
 #include <vtkImageFlip.h>
 #include <vtkPolyLine.h>
+#include <vtkImageShiftScale.h>
+#include <vtkPNGWriter.h>
 
 #include <Eigen/Dense>
 
@@ -35,13 +40,63 @@ bool show_normals = false;
 bool show_refined = false;
 bool show_help = true;
 bool clicked = false;
+bool create_range_image = false;
 Eigen::Vector3d cam_wor;
 Eigen::Vector3d ray_wor;
 
 int label_idx = 1;
 int supervoxel_idx = 1;
 
-// pcl::visualization::PointCloudColorHandlerLabelField<PointLT> getLabelHandler(int label);
+using namespace pcl;
+using namespace std;
+
+void
+mySaveRangeImagePlanarFilePNG (const string &file_name, const RangeImagePlanar& range_image)
+{
+  vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
+  image->SetDimensions(range_image.width, range_image.height, 1);
+
+  image->SetNumberOfScalarComponents(1);
+  image->SetScalarTypeToFloat();
+  image->AllocateScalars();
+
+  int* dims = image->GetDimensions();
+
+  for (int y = 0; y < dims[1]; y++)
+    {
+    for (int x = 0; x < dims[0]; x++)
+      {
+      float* pixel = static_cast<float*>(image->GetScalarPointer(x,y,0));
+      pixel[0] = range_image(x,y).range;
+      if (pixel[0] < 0) pixel[0] = 0.0f; // Get rid of ranges in -Inf or +Inf. 
+      }
+    }
+
+  // Compute the scaling
+  // cout << "img scalar range " << image->GetScalarRange()[0] << " " << image->GetScalarRange()[1] << endl;
+
+  float oldRange = static_cast<float> (image->GetScalarRange()[1] - image->GetScalarRange()[0]);
+  float newRange = 255; // We want the output [0,2047]
+
+  vtkSmartPointer<vtkImageShiftScale> shiftScaleFilter = vtkSmartPointer<vtkImageShiftScale>::New();
+  shiftScaleFilter->SetOutputScalarTypeToUnsignedChar();
+
+  shiftScaleFilter->SetInputConnection(image->GetProducerPort());
+
+  shiftScaleFilter->SetShift(-1.0f * image->GetScalarRange()[0]); // brings the lower bound to 0
+  shiftScaleFilter->SetScale(newRange/oldRange);
+  shiftScaleFilter->Update();
+
+  vtkSmartPointer<vtkImageFlip> flipXFilter = vtkSmartPointer<vtkImageFlip>::New();
+  flipXFilter->SetFilteredAxis(0); // flip x axis
+  flipXFilter->SetInputConnection(shiftScaleFilter->GetOutputPort());
+  flipXFilter->Update();
+
+  vtkSmartPointer<vtkPNGWriter> writer = vtkSmartPointer<vtkPNGWriter>::New();
+  writer->SetFileName(file_name.c_str());
+  writer->SetInputConnection(flipXFilter->GetOutputPort());
+  writer->Write();
+}
 
 /** \brief Callback for setting options in the visualizer via keyboard.
  *  \param[in] event Registered keyboard event  */
@@ -70,6 +125,9 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void*)
       case (int)'*': label_idx = 8; break;
       case (int)'(': label_idx = 9; break;
       case (int)')': label_idx = 10; break;
+
+      case (int)'~': create_range_image = true; break;
+
 
       case (int)'h': case (int)'H': show_help = !show_help; break;
       default: break;
@@ -161,8 +219,6 @@ void removeText (boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer);
 bool
 hasField (const pcl::PCLPointCloud2 &pc2, const std::string field_name);
 
-
-using namespace pcl;
 
 int
 main (int argc, char ** argv)
@@ -419,6 +475,36 @@ main (int argc, char ** argv)
   // visualization::PointCloudColorHandlerLabelField<PointLT> outputColor = getLabelHandler(20);
   // pcl::visualization::PointCloudColorHandlerCustom<PointLT> greenColor(cloud, 0, 255, 0);
 
+  // PointCloud<PointXYZ>::Ptr range_cloud(new PointCloud<PointXYZ>());
+  // int sz = 10;
+  // for (size_t i = 0; i < sz; i++) 
+  // {
+  //   for (size_t j = 0; j < sz; j++)
+  //   {
+  //     float px = (sz/2 - i);
+  //     float py = (sz/2 - j);
+  //     PointXYZ p;
+  //     p.x = px;
+  //     p.y = py;
+  //     p.z = 0;
+  //     range_cloud->push_back(p);
+  //   }
+  // }   
+  // viewer->addPointCloud(range_cloud, "range cloud");
+
+  // PointCloud<PointXYZ>::Ptr range_cloud(new PointCloud<PointXYZ>());
+  // // Generate the data
+  // for (float y=-0.5f; y<=0.5f; y+=0.01f) {
+  //   for (float z=-0.5f; z<=0.5f; z+=0.01f) {
+  //     pcl::PointXYZ point;
+  //     point.x = 2.0f - y;
+  //     point.y = y;
+  //     point.z = z;
+  //     range_cloud->points.push_back(point);
+  //   }
+  // }
+  // viewer->addPointCloud(range_cloud, "range cloud");
+
   int num_labels = 20;
   std::vector<int> r,g,b;
   int d = floor(255/num_labels);
@@ -436,6 +522,32 @@ main (int argc, char ** argv)
   std::cout << "Loading viewer...\n";
   while (!viewer->wasStopped ())
   {
+    if (create_range_image)
+    {
+      PointCloud<PointXYZ>::Ptr range_cloud(new PointCloud<PointXYZ>());
+      copyPointCloud(*refined_labeled_voxel_cloud, *range_cloud);
+      // viewer->addPointCloud(range_cloud, "range_cloud");
+
+      float width = 640.f;
+      float height = 480.f;
+      float fx_d = 5.8262448167737955e+02;
+      float fy_d = 5.8269103270988637e+02;
+      float cx_d = 3.1304475870804731e+02;
+      float cy_d = 2.3844389626620386e+02;
+
+      float sc = 1.0f;
+
+
+      Eigen::Affine3f sensor_pose = viewer->getViewerPose();
+
+      RangeImagePlanar::Ptr range_image(new pcl::RangeImagePlanar());
+      range_image->createFromPointCloudWithFixedSize(*range_cloud, (int)width*sc, (int)height*sc,
+                                  cx_d*sc, cy_d*sc, fx_d*sc, fy_d*sc, sensor_pose);
+      mySaveRangeImagePlanarFilePNG ("range.png", *range_image);
+
+      create_range_image = false;
+
+    }
     if (show_supervoxels)
     {
       if (!viewer->updatePointCloud<PointLT> (refined_labeled_voxel_cloud, labelColor, "colored voxels"))
