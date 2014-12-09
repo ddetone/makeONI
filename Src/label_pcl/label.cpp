@@ -349,96 +349,7 @@ main (int argc, char ** argv)
   float normal_importance = 1.0f;
   pcl::console::parse (argc, argv, "-n", normal_importance);
   
-  // if (!pcd_file_specified)
-  // {
-  //   //Read the images
-  //   vtkSmartPointer<vtkImageReader2Factory> reader_factory = vtkSmartPointer<vtkImageReader2Factory>::New ();
-  //   vtkImageReader2* rgb_reader = reader_factory->CreateImageReader2 (rgb_path.c_str ());
-  //   //qDebug () << "RGB File="<< QString::fromStdString(rgb_path);
-  //   if ( ! rgb_reader->CanReadFile (rgb_path.c_str ()))
-  //   {
-  //     std::cout << "Cannot read rgb image file!";
-  //     return (1);
-  //   }
-  //   rgb_reader->SetFileName (rgb_path.c_str ());
-  //   rgb_reader->Update ();
-  //   //qDebug () << "Depth File="<<QString::fromStdString(depth_path);
-  //   vtkImageReader2* depth_reader = reader_factory->CreateImageReader2 (depth_path.c_str ());
-  //   if ( ! depth_reader->CanReadFile (depth_path.c_str ()))
-  //   {
-  //     std::cout << "Cannot read depth image file!";
-  //     return (1);
-  //   }
-  //   depth_reader->SetFileName (depth_path.c_str ());
-  //   depth_reader->Update ();
-    
-  //   vtkSmartPointer<vtkImageFlip> flipXFilter = vtkSmartPointer<vtkImageFlip>::New();
-  //   flipXFilter->SetFilteredAxis(0); // flip x axis
-  //   flipXFilter->SetInputConnection(rgb_reader->GetOutputPort());
-  //   flipXFilter->Update();
-    
-  //   vtkSmartPointer<vtkImageFlip> flipXFilter2 = vtkSmartPointer<vtkImageFlip>::New();
-  //   flipXFilter2->SetFilteredAxis(0); // flip x axis
-  //   flipXFilter2->SetInputConnection(depth_reader->GetOutputPort());
-  //   flipXFilter2->Update();
-    
-  //   vtkSmartPointer<vtkImageData> rgb_image = flipXFilter->GetOutput ();
-  //   int *rgb_dims = rgb_image->GetDimensions ();
-  //   vtkSmartPointer<vtkImageData> depth_image = flipXFilter2->GetOutput ();
-  //   int *depth_dims = depth_image->GetDimensions ();
-    
-  //   if (rgb_dims[0] != depth_dims[0] || rgb_dims[1] != depth_dims[1])
-  //   {
-  //     std::cout << "Depth and RGB dimensions to not match!";
-  //     std::cout << "RGB Image is of size "<<rgb_dims[0] << " by "<<rgb_dims[1];
-  //     std::cout << "Depth Image is of size "<<depth_dims[0] << " by "<<depth_dims[1];
-  //     return (1);
-  //   }
- 
-  //   cloud->points.reserve (depth_dims[0] * depth_dims[1]);
-  //   cloud->width = depth_dims[0];
-  //   cloud->height = depth_dims[1];
-  //   cloud->is_dense = false;
-    
-    
-  //   // Fill in image data
-  //   int centerX = static_cast<int>(cloud->width / 2.0);
-  //   int centerY = static_cast<int>(cloud->height / 2.0);
-  //   unsigned short* depth_pixel;
-  //   unsigned char* color_pixel;
-  //   float scale = 1.0f/1000.0f;
-  //   float focal_length = 525.0f;
-  //   float fl_const = 1.0f / focal_length;
-  //   depth_pixel = static_cast<unsigned short*>(depth_image->GetScalarPointer (depth_dims[0]-1,depth_dims[1]-1,0));
-  //   color_pixel = static_cast<unsigned char*> (rgb_image->GetScalarPointer (depth_dims[0]-1,depth_dims[1]-1,0));
-    
-  //   for (size_t y=0; y<cloud->height; ++y)
-  //   {
-  //     for (size_t x=0; x<cloud->width; ++x, --depth_pixel, color_pixel-=3)
-  //     {
-  //       PointT new_point;
-  //       //  uint8_t* p_i = &(cloud_blob->data[y * cloud_blob->row_step + x * cloud_blob->point_step]);
-  //       float depth = static_cast<float>(*depth_pixel) * scale;
-  //       if (depth == 0.0f)
-  //       {
-  //         new_point.x = new_point.y = new_point.z = std::numeric_limits<float>::quiet_NaN ();
-  //       }
-  //       else
-  //       {
-  //         new_point.x = (static_cast<float> (x) - centerX) * depth * fl_const;
-  //         new_point.y = (static_cast<float> (centerY) - y) * depth * fl_const; // vtk seems to start at the bottom left image corner
-  //         new_point.z = depth;
-  //       }
-        
-  //       uint32_t rgb = static_cast<uint32_t>(color_pixel[0]) << 16 |  static_cast<uint32_t>(color_pixel[1]) << 8 |  static_cast<uint32_t>(color_pixel[2]);
-  //       new_point.rgb = *reinterpret_cast<float*> (&rgb);
-  //       cloud->points.push_back (new_point);
-        
-  //     }
-  //   }
-  // }
-  // else
-  // {
+
     /// check if the provided pcd file contains normals
   pcl::PCLPointCloud2 input_pointcloud2;
   if (pcl::io::loadPCDFile (pcd_path, input_pointcloud2))
@@ -496,20 +407,23 @@ main (int argc, char ** argv)
   // PointNCloudT::Ptr sv_normal_cloud = super.makeSupervoxelNormalCloud (supervoxel_clusters);
   // PointLCloudT::Ptr full_labeled_cloud = super.getLabeledCloud ();
   
-  std::cout << "Getting supervoxel adjacency\n";
-  std::multimap<uint32_t, uint32_t> label_adjacency;
+  cout << "Getting supervoxel adjacency\n";
+  multimap<uint32_t, uint32_t> label_adjacency;
   super.getSupervoxelAdjacency (label_adjacency);
    
-  std::map <uint32_t, pcl::Supervoxel<PointT>::Ptr > refined_supervoxel_clusters;
-  std::cout << "Refining supervoxels \n";
+  map <uint32_t, Supervoxel<PointT>::Ptr > refined_supervoxel_clusters;
+  cout << "Refining supervoxels \n";
   super.refineSupervoxels (3, refined_supervoxel_clusters);
+
+
+
 
   PointLCloudT::Ptr refined_labeled_voxel_cloud = super.getLabeledVoxelCloud ();
   // PointNCloudT::Ptr refined_sv_normal_cloud = super.makeSupervoxelNormalCloud (refined_supervoxel_clusters);
-  PointLCloudT::Ptr refined_full_labeled_cloud = super.getLabeledCloud ();
+  // PointLCloudT::Ptr refined_full_labeled_cloud = super.getLabeledCloud ();
 
 
-  std::map<pcl::Supervoxel<PointT>::Ptr, std::string> output_supervoxel_ids;
+  map<Supervoxel<PointT>::Ptr, pair<string,int> > output_supervoxel_ids;
 
   
   std::cout << "Constructing Boost Graph Library Adjacency List...\n";
@@ -578,32 +492,32 @@ main (int argc, char ** argv)
   std::cout << "Loading viewer...\n";
   while (!viewer->wasStopped ())
   {
-    if (create_range_image)
-    {
-      PointCloud<PointXYZ>::Ptr range_cloud(new PointCloud<PointXYZ>());
-      copyPointCloud(*refined_labeled_voxel_cloud, *range_cloud);
-      // viewer->addPointCloud(range_cloud, "range_cloud");
+    // if (create_range_image)
+    // {
+    //   PointCloud<PointXYZ>::Ptr range_cloud(new PointCloud<PointXYZ>());
+    //   copyPointCloud(*refined_labeled_voxel_cloud, *range_cloud);
+    //   // viewer->addPointCloud(range_cloud, "range_cloud");
 
-      float width = 640.f;
-      float height = 480.f;
-      float fx_d = 5.8262448167737955e+02;
-      float fy_d = 5.8269103270988637e+02;
-      float cx_d = 3.1304475870804731e+02;
-      float cy_d = 2.3844389626620386e+02;
+    //   float width = 640.f;
+    //   float height = 480.f;
+    //   float fx_d = 5.8262448167737955e+02;
+    //   float fy_d = 5.8269103270988637e+02;
+    //   float cx_d = 3.1304475870804731e+02;
+    //   float cy_d = 2.3844389626620386e+02;
 
-      float sc = 1.0f;
+    //   float sc = 1.0f;
 
 
-      Eigen::Affine3f sensor_pose = viewer->getViewerPose();
+    //   Eigen::Affine3f sensor_pose = viewer->getViewerPose();
 
-      RangeImagePlanar::Ptr range_image(new pcl::RangeImagePlanar());
-      range_image->createFromPointCloudWithFixedSize(*range_cloud, (int)width*sc, (int)height*sc,
-                                  cx_d*sc, cy_d*sc, fx_d*sc, fy_d*sc, sensor_pose);
-      mySaveRangeImagePlanarFilePNG ("range.png", *range_image);
+    //   RangeImagePlanar::Ptr range_image(new pcl::RangeImagePlanar());
+    //   range_image->createFromPointCloudWithFixedSize(*range_cloud, (int)width*sc, (int)height*sc,
+    //                               cx_d*sc, cy_d*sc, fx_d*sc, fy_d*sc, sensor_pose);
+    //   mySaveRangeImagePlanarFilePNG ("range.png", *range_image);
 
-      create_range_image = false;
+    //   create_range_image = false;
 
-    }
+    // }
     if (show_supervoxels)
     {
       if (!viewer->updatePointCloud<PointLT> (refined_labeled_voxel_cloud, labelColor, "colored voxels"))
@@ -667,13 +581,13 @@ main (int argc, char ** argv)
       Supervoxel<PointT>::Ptr found_sv = (sv_min_d->second);
       PointCloudT::Ptr found_pct = found_sv->voxels_;
 
-      std::map<Supervoxel<PointT>::Ptr, string>::iterator search_it, search_it_end;
+      map<Supervoxel<PointT>::Ptr, pair<string,int> >::iterator search_it, search_it_end;
       search_it = output_supervoxel_ids.find(found_sv);
       search_it_end = output_supervoxel_ids.end();
       if (search_it != search_it_end) //Supervoxel is already in output_cloud, remove it first
       {
         output_supervoxel_ids.erase(search_it);
-        viewer->removePointCloud(search_it->second);
+        viewer->removePointCloud(search_it->second.first);
       }
 
       // Declare a new voxel cluster
@@ -706,10 +620,8 @@ main (int argc, char ** argv)
       viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3.0, sstr);
 
       // Add new output voxel to list that stores the voxel pointer and idx
-      output_supervoxel_ids.insert ( std::pair<Supervoxel<PointT>::Ptr,std::string>(found_sv,sstr) );
-
-
-      
+      pair<string,int> add_me = make_pair(sstr, label_idx);
+      output_supervoxel_ids.insert ( pair<Supervoxel<PointT>::Ptr, pair<string,int> >(found_sv, add_me));
 
       clicked = false;
     }
@@ -772,40 +684,36 @@ main (int argc, char ** argv)
     
   }
 
-  // // Create final labeled out_cloud
-  // PointLCloudT::Ptr out_cloud;
-  // map<pcl::Supervoxel<PointT>::Ptr, string>::iterator search_it, search_it_end;
-  // search_it = output_supervoxel_ids.begin();
-  // search_it_end = output_supervoxel_ids.end();
-  // int label = 0;
-  // while (search_it++ != search_it_end)
-  // {
-  //   cout << "blah1" << endl;
-  //   PointCloudT::Ptr found_pct = search_it->first->voxels_;
+  // Create final labeled out_cloud
+  PointLCloudT::Ptr out_cloud (new PointLCloudT());
+  map<pcl::Supervoxel<PointT>::Ptr, pair<string,int> >::iterator search_it, search_it_end;
+  search_it = output_supervoxel_ids.begin();
+  search_it_end = output_supervoxel_ids.end();
+  while (search_it != search_it_end)
+  {
+    PointCloudT::Ptr found_pct = search_it->first->voxels_;
+    int nyuv2_label = search_it->second.second;
 
-  //   // Iterate through the found voxel, adding points to new output voxel
-  //   PointCloudT::iterator lbl_it = found_pct->begin();
-  //   PointCloudT::iterator lbl_it_end = found_pct->end();
-  //   cout << "blah2" << endl;
-  //   cout << "size is " << found_pct->size() << endl;
-  //   for (; lbl_it != lbl_it_end; ++lbl_it)
-  //   {
-  //     cout << "blah3" << endl;
-  //     PointT pt = (*lbl_it);
-  //     PointLT ptl;
-  //     ptl.x = pt.x;
-  //     ptl.y = pt.y;
-  //     ptl.z = pt.z;
-  //     ptl.label = label;
-  //     out_cloud->push_back(ptl);
-  //     cout << "blah4" << endl;
-  //   }
-  //   label++;
-  // }
+    // Iterate through the found voxel, adding points to new output voxel
+    PointCloudT::iterator lbl_it = found_pct->begin();
+    PointCloudT::iterator lbl_it_end = found_pct->end();
+    for (; lbl_it != lbl_it_end; )
+    {
+      PointT pt = (*lbl_it);
+      PointLT ptl;
+      ptl.x = pt.x;
+      ptl.y = pt.y;
+      ptl.z = pt.z;
+      ptl.label = nyuv2_label;
+      out_cloud->push_back(ptl);
+      lbl_it++;
+    }
+    search_it++;
+  }
 
   // // pcl::io::savePCDFileASCII ("test_pcd.pcd", *refined_labeled_voxel_cloud);
-  // pcl::io::savePCDFileASCII ("out_cloud.pcd", *out_cloud);
-  // std::cerr << "Saved data points to out_cloud.pcd." << std::endl;
+  pcl::io::savePCDFileASCII ("out_cloud.pcd", *out_cloud);
+  std::cerr << "Saved data points to out_cloud.pcd." << std::endl;
   return (0);
 }
 
