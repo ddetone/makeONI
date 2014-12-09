@@ -72,36 +72,72 @@ class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
       if(key == "Up")
         {
           // read depth image from vtk Window
-        VTK_CREATE (vtkWindowToImageFilter, filter);
-        filter->SetInput (rwi->GetRenderWindow());
-        filter->SetMagnification( 1 );
-        filter->SetInputBufferTypeToZBuffer();
-        // filter->SetInputBufferTypeToRGBA();
-        filter->ReadFrontBufferOff();
-        filter->Update ();
+        VTK_CREATE (vtkWindowToImageFilter, filterDepth);
+        filterDepth->SetInput (rwi->GetRenderWindow());
+        filterDepth->SetMagnification( 1 );
+        filterDepth->SetInputBufferTypeToZBuffer();
+        filterDepth->ReadFrontBufferOff();
+        filterDepth->Update ();
 
         VTK_CREATE(vtkImageData, imdepth);
-        imdepth = filter->GetOutput();
+        imdepth = filterDepth->GetOutput();
         int dimsdepth[3];
         imdepth->GetDimensions(dimsdepth);
 
-        VTK_CREATE(vtkImageShiftScale, scaler);
+        VTK_CREATE(vtkImageShiftScale, scalerDepth);
         // scaler->SetOutputScalarTypeToUnsignedShort();
         // scaler->SetInputConnection(imdepth->GetProducerPort());
         // scaler->SetShift(-1.0f * image->GetScalarRange()[0]); // brings the lower bound to 0
         // scaler->SetScale(newRange/oldRange);
-        scaler->SetOutputScalarTypeToUnsignedChar(); 
-        scaler->SetInputConnection(filter->GetOutputPort()); 
-        scaler->SetShift(0); 
-        scaler->SetScale(-255);
-        scaler->Update();
+        scalerDepth->SetOutputScalarTypeToUnsignedChar(); 
+        scalerDepth->SetInputConnection(filterDepth->GetOutputPort()); 
+        scalerDepth->SetShift(0); 
+        scalerDepth->SetScale(-255);
+        scalerDepth->Update();
 
         // save the depth img as a png
         VTK_CREATE(vtkPNGWriter, writer);
-        writer->SetFileName ("output.png");
-        writer->SetInputConnection (scaler->GetOutputPort ());
+        writer->SetFileName ("outputDepth.png");
+        writer->SetInputConnection (scalerDepth->GetOutputPort ());
         writer->Write ();
-        std::cout << "Wrote image." << std::endl;
+        std::cout << "Wrote image Depth." << std::endl;
+
+
+
+        // read RGB image from vtk Window
+        VTK_CREATE (vtkWindowToImageFilter, filterRGB);
+        filterRGB->SetInput (rwi->GetRenderWindow());
+        filterRGB->SetMagnification( 1 );
+        filterRGB->SetInputBufferTypeToRGBA();
+        filterRGB->ReadFrontBufferOff();
+        filterRGB->Update ();
+
+        VTK_CREATE(vtkImageData, imrgb);
+        imrgb = filterDepth->GetOutput();
+        dimsdepth[3];
+        imrgb->GetDimensions(dimsdepth);
+
+        VTK_CREATE(vtkImageShiftScale, scalerRGB);
+        // scaler->SetOutputScalarTypeToUnsignedShort();
+        // scaler->SetInputConnection(imdepth->GetProducerPort());
+        // scaler->SetShift(-1.0f * image->GetScalarRange()[0]); // brings the lower bound to 0
+        // scaler->SetScale(newRange/oldRange);
+        scalerRGB->SetOutputScalarTypeToUnsignedChar(); 
+        scalerRGB->SetInputConnection(filterRGB->GetOutputPort()); 
+        scalerRGB->SetShift(0); 
+        scalerRGB->SetScale(-255);
+        scalerRGB->Update();
+
+        // save the depth img as a png
+        VTK_CREATE(vtkPNGWriter, writerRGB);
+        writerRGB->SetFileName ("outputRGB.png");
+        writerRGB->SetInputConnection (scalerRGB->GetOutputPort ());
+        writerRGB->Write ();
+        std::cout << "Wrote image RGB." << std::endl;
+
+
+
+
         }
  
       // Handle a "normal" key
@@ -156,8 +192,11 @@ int main ( int argc, char *argv[] )
   mapper->Update ();
 
   actor->SetMapper(mapper);
-  actor->RotateY (95); // transform with a rotation to see depth
-  actor->GetProperty()->SetColor(1, 0, 0);
+  // actor->RotateY (95); // transform with a rotation to see depth
+  // actor->GetProperty()->SetColor(1, 0, 0);
+  actor->GetProperty()->SetInterpolationToFlat();
+  actor->GetProperty()->LightingOff();
+  actor->GetProperty()->ShadingOff();
   sort->SetProp3D (actor); // set the actor to the algo
 
   rend->SetActiveCamera (cam);
