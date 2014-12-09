@@ -17,6 +17,8 @@
 #include <vtkPolyLine.h>
 #include <vtkImageShiftScale.h>
 #include <vtkPNGWriter.h>
+#include <vtkWindowToImageFilter.h>
+#include <vtkSmartPointer.h>
 
 #include <Eigen/Dense>
 
@@ -97,6 +99,60 @@ mySaveRangeImagePlanarFilePNG (const string &file_name, const RangeImagePlanar& 
   writer->SetInputConnection(flipXFilter->GetOutputPort());
   writer->Write();
 }
+
+// void
+// saveRenderWindow(const string &file_name, void* viewer_void)
+// {
+//   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer = *static_cast<boost::shared_ptr<pcl::visualization::PCLVisualizer> *> (viewer_void);
+
+
+//   vtkSmartPointer<vtkRenderWindow> renderWindow = viewer->getRenderWindow();
+//   vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter = vtkSmartPointer<vtkWindowToImageFilter>::New();
+//   windowToImageFilter->SetInput( renderWindow );
+
+//   // //get rgb-image
+//   // windowToImageFilter->SetInputBufferTypeToRGB();
+//   // windowToImageFilter->Update();
+//   // vtkImageData* vtkRGBimage = windowToImageFilter->GetOutput();
+//   // int dimsRGBImage[3];
+//   // vtkRGBimage->GetDimensions(dimsRGBImage);
+//   // cv::Mat cvImageRGB (dimsRGBImage[1], dimsRGBImage[0], CV_8UC3, vtkRGBimage->GetScalarPointer());
+//   // cv::cvtColor( cvImageRGB, cvImageRGB, CV_BGR2RGB); //convert color
+//   // cv::flip( cvImageRGB, cvImageRGB, 0); //align axis with visualizer
+
+//   // //visualize
+//   // const std::string windowNameRGBImage = "vtkRGBImage";
+//   // cv::namedWindow( windowNameRGBImage, cv::WINDOW_NORMAL);
+//   // cv::imshow( windowNameRGBImage, cvImageRGB);
+
+//   // vtkSmartPointer<vtkRenderWindow> renderWindow = Visualizer_.getRenderWindow();
+//   // vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter = vtkSmartPointer<vtkWindowToImageFilter>::New();
+//   // windowToImageFilter->SetInput( renderWindow );
+
+//   //get detph-image
+//   windowToImageFilter->SetMagnification( 1 );
+//   windowToImageFilter->SetInputBufferTypeToZBuffer();
+//   windowToImageFilter->Update();
+//   vtkImageData* vtkDepthImage = windowToImageFilter->GetOutput();
+//   int dimsDepthImage[3];
+//   vtkDepthImage->GetDimensions(dimsDepthImage);
+
+//   vtkSmartPointer<vtkPNGWriter> writer = vtkSmartPointer<vtkPNGWriter>::New();
+//   writer->SetFileName(file_name.c_str());
+//   writer->SetInputConnection(vtkDepthImage->GetProducerPort());
+//   writer->Write();
+
+//   // //build opencv::Mat
+//   // cv::Mat cvImageDepth (dimsDepthImage[1], dimsDepthImage[0], 
+//   // CV_32F, vtkDepthImage->GetScalarPointer());
+//   // cv::flip( cvImageDepth, cvImageDepth, 0); //align axis with 
+//   // visualizer
+
+//   // //visualize
+//   // const std::string windowNameDepthImage = "vtkDepthImage32F";
+//   // cv::namedWindow( windowNameDepthImage, cv::WINDOW_NORMAL);
+//   // cv::imshow( windowNameDepthImage, cvImageDepth);  
+// }
 
 /** \brief Callback for setting options in the visualizer via keyboard.
  *  \param[in] event Registered keyboard event  */
@@ -611,78 +667,49 @@ main (int argc, char ** argv)
       Supervoxel<PointT>::Ptr found_sv = (sv_min_d->second);
       PointCloudT::Ptr found_pct = found_sv->voxels_;
 
-      std::map<pcl::Supervoxel<PointT>::Ptr, std::string>::iterator search_it, search_it_end;
+      std::map<Supervoxel<PointT>::Ptr, string>::iterator search_it, search_it_end;
       search_it = output_supervoxel_ids.find(found_sv);
       search_it_end = output_supervoxel_ids.end();
-      if (search_it == search_it_end) //Supervoxel has not yet been added to output_cloud
+      if (search_it != search_it_end) //Supervoxel is already in output_cloud, remove it first
       {
-        // Declare a new voxel cluster
-        PointLCloudT::Ptr output_cloud (new PointLCloudT());
-
-        // Iterate through the found voxel, adding points to new output voxel
-        PointCloudT::iterator lbl_it = found_pct->begin();
-        PointCloudT::iterator lbl_it_end = found_pct->end();
-        for (; lbl_it != lbl_it_end; ++lbl_it)
-        {
-          PointT pt = (*lbl_it);
-          PointLT ptl;
-          ptl.x = pt.x;
-          ptl.y = pt.y;
-          ptl.z = pt.z;
-          ptl.label = label_idx;
-          output_cloud->push_back(ptl);
-        } 
-
-        // Add new output voxel to visualizer
-        char str[512];
-        sprintf (str, "text#%03d", supervoxel_idx ++);
-        std::string sstr(str);
-        // cout << sstr << endl;
-
-        int j = label_idx;
-        pcl::visualization::PointCloudColorHandlerCustom<PointLT> single_color(output_cloud, r[j], g[j], b[j]);
-        // viewer->addPointCloud<PointLT> (output_cloud, outputColor, sstr);
-        viewer->addPointCloud<PointLT> (output_cloud, single_color, sstr);
-        viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3.0, sstr);
-
-        // Add new output voxel to list that stores the voxel pointer and idx
-        output_supervoxel_ids.insert ( std::pair<Supervoxel<PointT>::Ptr,std::string>(found_sv,sstr) );
-
-      }
-      else //Supervoxel is already in output_cloud
-      {
-
+        output_supervoxel_ids.erase(search_it);
+        viewer->removePointCloud(search_it->second);
       }
 
+      // Declare a new voxel cluster
+      PointLCloudT::Ptr output_cloud (new PointLCloudT());
 
-      // // std::map <pcl::Supervoxel<PointT>::Ptr, uint32_t> output_supervoxel_ids;
-      // PointLCloudT::Ptr output_cloud (new PointLCloudT());
+      // Iterate through the found voxel, adding points to new output voxel
+      PointCloudT::iterator lbl_it = found_pct->begin();
+      PointCloudT::iterator lbl_it_end = found_pct->end();
+      for (; lbl_it != lbl_it_end; ++lbl_it)
+      {
+        PointT pt = (*lbl_it);
+        PointLT ptl;
+        ptl.x = pt.x;
+        ptl.y = pt.y;
+        ptl.z = pt.z;
+        ptl.label = label_idx;
+        output_cloud->push_back(ptl);
+      } 
 
-      // PointCloudT::iterator lbl_it = pct->begin();
-      // PointCloudT::iterator lbl_it_end = pct->end();
-      // for (; lbl_it != lbl_it_end; ++lbl_it)
-      // {
-      //   PointT pt = (*lbl_it);
-      //   PointLT ptl;
-      //   ptl.x = pt.x;
-      //   ptl.y = pt.y;
-      //   ptl.z = pt.z;
-      //   ptl.label = label_idx;
-      //   output_cloud->push_back(ptl);
-      // } 
+      // Add new output voxel to visualizer
+      char str[512];
+      sprintf (str, "text#%03d", supervoxel_idx ++);
+      string sstr(str);
+      // cout << sstr << endl;
+
+      int j = label_idx;
+      pcl::visualization::PointCloudColorHandlerCustom<PointLT> single_color(output_cloud, r[j], g[j], b[j]);
+      // viewer->addPointCloud<PointLT> (output_cloud, outputColor, sstr);
+      viewer->addPointCloud<PointLT> (output_cloud, single_color, sstr);
+      viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3.0, sstr);
+
+      // Add new output voxel to list that stores the voxel pointer and idx
+      output_supervoxel_ids.insert ( std::pair<Supervoxel<PointT>::Ptr,std::string>(found_sv,sstr) );
 
 
-      // char str[512];
-      // sprintf (str, "text#%03d", supervoxel_idx ++);
-      // std::string sstr(str); 
-
-      // pcl::visualization::PointCloudColorHandlerLabelField<PointLT> outputColor(output_cloud);
-
-      // if (!viewer->updatePointCloud<PointT> (voxel_centroid_cloud, "voxel centroids"))
-      // {
-      //   viewer->addPointCloud<PointLT> (output_cloud, outputColor, sstr);
-      //   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE,3.0, sstr);
-      // }
+      
 
       clicked = false;
     }
@@ -745,9 +772,40 @@ main (int argc, char ** argv)
     
   }
 
-  // pcl::io::savePCDFileASCII ("test_pcd.pcd", *refined_labeled_voxel_cloud);
-  // pcl::io::savePCDFileASCII ("output_cloud.pcd", *output_cloud);
-  // std::cerr << "Saved data points to test_pcd.pcd." << std::endl;
+  // // Create final labeled out_cloud
+  // PointLCloudT::Ptr out_cloud;
+  // map<pcl::Supervoxel<PointT>::Ptr, string>::iterator search_it, search_it_end;
+  // search_it = output_supervoxel_ids.begin();
+  // search_it_end = output_supervoxel_ids.end();
+  // int label = 0;
+  // while (search_it++ != search_it_end)
+  // {
+  //   cout << "blah1" << endl;
+  //   PointCloudT::Ptr found_pct = search_it->first->voxels_;
+
+  //   // Iterate through the found voxel, adding points to new output voxel
+  //   PointCloudT::iterator lbl_it = found_pct->begin();
+  //   PointCloudT::iterator lbl_it_end = found_pct->end();
+  //   cout << "blah2" << endl;
+  //   cout << "size is " << found_pct->size() << endl;
+  //   for (; lbl_it != lbl_it_end; ++lbl_it)
+  //   {
+  //     cout << "blah3" << endl;
+  //     PointT pt = (*lbl_it);
+  //     PointLT ptl;
+  //     ptl.x = pt.x;
+  //     ptl.y = pt.y;
+  //     ptl.z = pt.z;
+  //     ptl.label = label;
+  //     out_cloud->push_back(ptl);
+  //     cout << "blah4" << endl;
+  //   }
+  //   label++;
+  // }
+
+  // // pcl::io::savePCDFileASCII ("test_pcd.pcd", *refined_labeled_voxel_cloud);
+  // pcl::io::savePCDFileASCII ("out_cloud.pcd", *out_cloud);
+  // std::cerr << "Saved data points to out_cloud.pcd." << std::endl;
   return (0);
 }
 
