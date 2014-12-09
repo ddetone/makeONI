@@ -276,6 +276,47 @@ bool
 hasField (const pcl::PCLPointCloud2 &pc2, const std::string field_name);
 
 
+static string ColourValues[] = { 
+    "FF0000", "00FF00", "0000FF", "FFFF00", "FF00FF", "00FFFF", "E0E0E0", 
+    "800000", "008000", "000080", "808000", "800080", "008080", "808080", 
+    "C00000", "00C000", "0000C0", "C0C000", "C000C0", "00C0C0", "C0C0C0", 
+    "400000", "004000", "000040", "404000", "400040", "004040", "404040", 
+    "200000", "002000", "000020", "202000", "200020", "002020", "202020", 
+    "600000", "006000", "000060", "606000", "600060", "006060", "606060", 
+    "A00000", "00A000", "0000A0", "A0A000", "A000A0", "00A0A0", "A0A0A0", 
+    "E00000", "00E000", "0000E0", "E0E000", "E000E0", "00E0E0", 
+};
+
+struct clr
+{
+  unsigned char r;
+  unsigned char g;
+  unsigned char b;
+};
+
+clr getColor(int label)
+{
+  
+  string cv = ColourValues[label];
+  char txt[10];
+  strcpy(txt, cv.c_str());
+
+  unsigned char bytes[3];
+  int i, temp;
+  for( i = 0; i < 3; ++i ) {
+    sscanf( txt + 2 * i, "%2x", &temp );
+    bytes[i] = temp;
+  }
+
+  clr c;
+  c.r = bytes[0];
+  c.g = bytes[1];
+  c.b = bytes[2];
+  return c;
+}
+
+
+
 int
 main (int argc, char ** argv)
 {
@@ -685,7 +726,8 @@ main (int argc, char ** argv)
   }
 
   // Create final labeled out_cloud
-  PointLCloudT::Ptr out_cloud (new PointLCloudT());
+  PointLCloudT::Ptr out_cloudLT (new PointLCloudT());
+  PointCloudT::Ptr out_cloudT (new PointCloudT());
   map<pcl::Supervoxel<PointT>::Ptr, pair<string,int> >::iterator search_it, search_it_end;
   search_it = output_supervoxel_ids.begin();
   search_it_end = output_supervoxel_ids.end();
@@ -700,20 +742,36 @@ main (int argc, char ** argv)
     for (; lbl_it != lbl_it_end; )
     {
       PointT pt = (*lbl_it);
+
       PointLT ptl;
       ptl.x = pt.x;
       ptl.y = pt.y;
       ptl.z = pt.z;
       ptl.label = nyuv2_label;
-      out_cloud->push_back(ptl);
+      out_cloudLT->push_back(ptl);
+
+      PointT ptt;
+      ptt.x = pt.x;
+      ptt.y = pt.y;
+      ptt.z = pt.z;
+      clr c = getColor(nyuv2_label);
+
+      uint8_t r = c.r, g = c.g, b = c.b;
+      uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+      ptt.rgb = *reinterpret_cast<float*>(&rgb);
+
+      out_cloudT->push_back(ptt);
+
       lbl_it++;
     }
     search_it++;
   }
 
   // // pcl::io::savePCDFileASCII ("test_pcd.pcd", *refined_labeled_voxel_cloud);
-  pcl::io::savePCDFileASCII ("out_cloud.pcd", *out_cloud);
-  std::cerr << "Saved data points to out_cloud.pcd." << std::endl;
+  pcl::io::savePCDFileASCII ("out_cloudLT.pcd", *out_cloudLT);
+  pcl::io::savePCDFileASCII ("out_cloudXYZRGBA.pcd", *out_cloudT);
+  std::cerr << "Saved data points to out_cloudLT.pcd." << std::endl;
+  std::cerr << "Saved data points to out_cloudXYZRGBA.pcd." << std::endl;
   return (0);
 }
 
