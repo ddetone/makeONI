@@ -62,10 +62,10 @@ mySaveRangeImagePlanarFilePNG (const string &file_name, const RangeImagePlanar& 
   // cout << "img scalar range " << image->GetScalarRange()[0] << " " << image->GetScalarRange()[1] << endl;
 
   float oldRange = static_cast<float> (image->GetScalarRange()[1] - image->GetScalarRange()[0]);
-  float newRange = 255; // We want the output [0,255]
+  float newRange = 2047; // We want the output [0,255]
 
   vtkSmartPointer<vtkImageShiftScale> shiftScaleFilter = vtkSmartPointer<vtkImageShiftScale>::New();
-  shiftScaleFilter->SetOutputScalarTypeToUnsignedChar();
+  shiftScaleFilter->SetOutputScalarTypeToUnsignedShort();
 
   shiftScaleFilter->SetInputConnection(image->GetProducerPort());
 

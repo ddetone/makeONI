@@ -80,6 +80,8 @@ mySaveRangeImagePlanarFilePNG (const string &file_name, const RangeImagePlanar& 
   float oldRange = static_cast<float> (image->GetScalarRange()[1] - image->GetScalarRange()[0]);
   float newRange = 255; // We want the output [0,2047]
 
+  cout << "oldrange" << oldRange << endl;
+
   vtkSmartPointer<vtkImageShiftScale> shiftScaleFilter = vtkSmartPointer<vtkImageShiftScale>::New();
   shiftScaleFilter->SetOutputScalarTypeToUnsignedChar();
 
@@ -171,18 +173,19 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void*)
       case (int)'5': show_supervoxel_normals = !show_supervoxel_normals; break;
       case (int)'0': show_refined = !show_refined; break;
 
-      case (int)'!': label_idx = 1; break;
-      case (int)'@': label_idx = 2; break;
-      case (int)'#': label_idx = 3; break;
-      case (int)'$': label_idx = 4; break;
-      case (int)'%': label_idx = 5; break;
-      case (int)'^': label_idx = 6; break;
-      case (int)'&': label_idx = 7; break;
-      case (int)'*': label_idx = 8; break;
-      case (int)'(': label_idx = 9; break;
-      case (int)')': label_idx = 10; break;
+      case (int)'~': label_idx = 0; cout << "changed color" << endl; break;
+      case (int)'!': label_idx = 1; cout << "changed color" << endl; break;
+      case (int)'@': label_idx = 2; cout << "changed color" << endl; break;
+      case (int)'#': label_idx = 3; cout << "changed color" << endl; break;
+      case (int)'$': label_idx = 4; cout << "changed color" << endl; break;
+      case (int)'%': label_idx = 5; cout << "changed color" << endl; break;
+      case (int)'^': label_idx = 6; cout << "changed color" << endl; break;
+      case (int)'&': label_idx = 7; cout << "changed color" << endl; break;
+      case (int)'*': label_idx = 8; cout << "changed color" <<  endl; break;
+      case (int)'(': label_idx = 9; cout << "changed color" << endl; break;
+      case (int)')': label_idx = 10; cout << "changed color" << endl; break;
 
-      case (int)'~': create_range_image = true; break;
+      case (int)'?': create_range_image = true; break;
 
 
       case (int)'h': case (int)'H': show_help = !show_help; break;
@@ -276,8 +279,8 @@ bool
 hasField (const pcl::PCLPointCloud2 &pc2, const std::string field_name);
 
 
-static string ColourValues[] = { 
-    "FF0000", "00FF00", "0000FF", "FFFF00", "FF00FF", "00FFFF", "E0E0E0", 
+static string ColourValuesVis[] = { 
+    "352A87", "2C4AC7", "42BB98", "1079DA", "E1B952", "F5E41D", "E0E0E0", 
     "800000", "008000", "000080", "808000", "800080", "008080", "808080", 
     "C00000", "00C000", "0000C0", "C0C000", "C000C0", "00C0C0", "C0C0C0", 
     "400000", "004000", "000040", "404000", "400040", "004040", "404040", 
@@ -297,7 +300,7 @@ struct clr
 clr getColor(int label)
 {
   
-  string cv = ColourValues[label];
+  string cv = ColourValuesVis[label];
   char txt[10];
   strcpy(txt, cv.c_str());
 
@@ -516,14 +519,25 @@ main (int argc, char ** argv)
   // }
   // viewer->addPointCloud(range_cloud, "range cloud");
 
+  // int num_labels = 20;
+  // std::vector<int> r,g,b;
+  // int d = floor(255/num_labels);
+  // for (int i=0; i<num_labels; i++)
+  // {
+  //   r.push_back((d*i) % 255);
+  //   g.push_back((d*i + 100) % 255);
+  //   b.push_back((255 - d*i) % 255);
+  // }
+
   int num_labels = 20;
   std::vector<int> r,g,b;
-  int d = floor(255/num_labels);
+  // int d = floor(255/num_labels);
   for (int i=0; i<num_labels; i++)
   {
-    r.push_back((d*i) % 255);
-    g.push_back((d*i + 100) % 255);
-    b.push_back((255 - d*i) % 255);
+    clr c = getColor(i);
+    r.push_back(c.r);
+    g.push_back(c.g);
+    b.push_back(c.b);
   }
 
 
@@ -533,32 +547,32 @@ main (int argc, char ** argv)
   std::cout << "Loading viewer...\n";
   while (!viewer->wasStopped ())
   {
-    // if (create_range_image)
-    // {
-    //   PointCloud<PointXYZ>::Ptr range_cloud(new PointCloud<PointXYZ>());
-    //   copyPointCloud(*refined_labeled_voxel_cloud, *range_cloud);
-    //   // viewer->addPointCloud(range_cloud, "range_cloud");
+    if (create_range_image)
+    {
+      PointCloud<PointXYZ>::Ptr range_cloud(new PointCloud<PointXYZ>());
+      copyPointCloud(*refined_labeled_voxel_cloud, *range_cloud);
+      // viewer->addPointCloud(range_cloud, "range_cloud");
 
-    //   float width = 640.f;
-    //   float height = 480.f;
-    //   float fx_d = 5.8262448167737955e+02;
-    //   float fy_d = 5.8269103270988637e+02;
-    //   float cx_d = 3.1304475870804731e+02;
-    //   float cy_d = 2.3844389626620386e+02;
+      float width = 640.f;
+      float height = 480.f;
+      float fx_d = 5.8262448167737955e+02;
+      float fy_d = 5.8269103270988637e+02;
+      float cx_d = 3.1304475870804731e+02;
+      float cy_d = 2.3844389626620386e+02;
 
-    //   float sc = 1.0f;
+      float sc = 1.0f;
 
 
-    //   Eigen::Affine3f sensor_pose = viewer->getViewerPose();
+      Eigen::Affine3f sensor_pose = viewer->getViewerPose();
 
-    //   RangeImagePlanar::Ptr range_image(new pcl::RangeImagePlanar());
-    //   range_image->createFromPointCloudWithFixedSize(*range_cloud, (int)width*sc, (int)height*sc,
-    //                               cx_d*sc, cy_d*sc, fx_d*sc, fy_d*sc, sensor_pose);
-    //   mySaveRangeImagePlanarFilePNG ("range.png", *range_image);
+      RangeImagePlanar::Ptr range_image(new pcl::RangeImagePlanar());
+      range_image->createFromPointCloudWithFixedSize(*range_cloud, (int)width*sc, (int)height*sc,
+                                  cx_d*sc, cy_d*sc, fx_d*sc, fy_d*sc, sensor_pose);
+      mySaveRangeImagePlanarFilePNG ("range.png", *range_image);
 
-    //   create_range_image = false;
+      create_range_image = false;
 
-    // }
+    }
     if (show_supervoxels)
     {
       if (!viewer->updatePointCloud<PointLT> (refined_labeled_voxel_cloud, labelColor, "colored voxels"))
@@ -747,7 +761,7 @@ main (int argc, char ** argv)
       ptl.x = pt.x;
       ptl.y = pt.y;
       ptl.z = pt.z;
-      ptl.label = nyuv2_label;
+      ptl.label = nyuv2_label+1;
       out_cloudLT->push_back(ptl);
 
       PointT ptt;

@@ -63,7 +63,7 @@ main (int argc, char** argv)
   PolygonMesh triangles;
 
   // Set the maximum distance between connected points (maximum edge length)
-  gp3.setSearchRadius (0.025);
+  gp3.setSearchRadius (0.1);
 
   // Set typical values for the parameters
   gp3.setMu (2.5);

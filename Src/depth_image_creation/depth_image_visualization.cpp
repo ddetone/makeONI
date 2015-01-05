@@ -52,6 +52,10 @@
 
 # define VTK_CREATE(type, nom) vtkSmartPointer<type> nom = vtkSmartPointer<type>::New()
 
+  VTK_CREATE(vtkActor, actor);
+
+  int count = 1;
+
 // Define interaction style
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
 {
@@ -67,6 +71,13 @@ class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
  
       // Output the key that was pressed
       std::cout << "Pressed " << key << std::endl;
+
+      if (key == "Down")
+      {
+          actor->GetProperty()->SetInterpolationToFlat();
+          actor->GetProperty()->LightingOff();
+          actor->GetProperty()->ShadingOff();
+      }
  
       // Handle an arrow key
       if(key == "Up")
@@ -97,7 +108,11 @@ class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
 
         // save the depth img as a png
         VTK_CREATE(vtkPNGWriter, writer);
-        writer->SetFileName ("outputDepth.png");
+
+        char strD[512];
+        sprintf (strD, "outdepth#%03d.png", count);
+
+        writer->SetFileName (strD);
         writer->SetInputConnection (scalerDepth->GetOutputPort ());
         writer->Write ();
         std::cout << "Wrote image Depth." << std::endl;
@@ -128,9 +143,12 @@ class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
         scalerRGB->SetScale(-255);
         scalerRGB->Update();
 
+        char strRGB[512];
+        sprintf (strRGB, "outrgb#%03d.png", count ++);
+
         // save the depth img as a png
         VTK_CREATE(vtkPNGWriter, writerRGB);
-        writerRGB->SetFileName ("outputRGB.png");
+        writerRGB->SetFileName (strRGB);
         writerRGB->SetInputConnection (scalerRGB->GetOutputPort ());
         writerRGB->Write ();
         std::cout << "Wrote image RGB." << std::endl;
@@ -172,7 +190,7 @@ int main ( int argc, char *argv[] )
 
   // init stuff for rendering
   VTK_CREATE(vtkPolyDataMapper, mapper);
-  VTK_CREATE(vtkActor, actor);
+
   VTK_CREATE(vtkRenderer, rend);
   VTK_CREATE(vtkRenderWindow, rw);
   VTK_CREATE(vtkRenderWindowInteractor, inte);
@@ -194,9 +212,9 @@ int main ( int argc, char *argv[] )
   actor->SetMapper(mapper);
   // actor->RotateY (95); // transform with a rotation to see depth
   // actor->GetProperty()->SetColor(1, 0, 0);
-  actor->GetProperty()->SetInterpolationToFlat();
-  actor->GetProperty()->LightingOff();
-  actor->GetProperty()->ShadingOff();
+  // actor->GetProperty()->SetInterpolationToFlat();
+  // actor->GetProperty()->LightingOff();
+  // actor->GetProperty()->ShadingOff();
   sort->SetProp3D (actor); // set the actor to the algo
 
   rend->SetActiveCamera (cam);
